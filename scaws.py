@@ -38,7 +38,7 @@ class Menu:
 
 def footer_instance(started):
     if started:
-            option1 = urwid.Text(u'(s): Stop Instance')
+            option1 = urwid.Text(u'(T): Stop Instance')
     else:
             option1 = urwid.Text(u'(S): Start Instance')
     option2 = urwid.Text(u'(Q): Quit')
@@ -49,7 +49,7 @@ def footer_instance(started):
 
     row2 = urwid.Pile([option3, option4])
 
-    option5 = urwid.Text(u'(T): List Tags')
+    option5 = urwid.Text(u'(t): List Tags')
     option6 = urwid.Text(u'(R): Refresh Instance')
 
     row3 = urwid.Pile([option5, option6])
@@ -103,6 +103,38 @@ def menu_back(nil):
     goback(menu)
 
 
+def draw_instance_in_menu(inst):
+    unavailable = False
+
+    started = False
+    if inst['State']['Name'] == 'running':
+        color = 'started'
+        started = True
+    elif inst['State']['Name'] == 'stopped':
+        color = 'stopped'
+        started = False
+    else:
+        color = 'pending'
+        unavailable = True
+
+    status = inst['State']['Name'].title()
+    menu.body = [
+            ('bold result', u'Instance ID: '), inst['InstanceId'], '\n',
+            ('bold result', u'Instance Status: '), (color, status), '\n',
+            ('bold result', u'PublicDnsName: '), inst['PublicDnsName'], '\n',
+            ('bold result', u'Private Address: '), inst['PrivateIpAddress'], '\n',
+            ('bold result', u'Availability Zone: '), inst['Placement']['AvailabilityZone'], '\n',
+            ('bold result', u'VPC ID: '), inst['VpcId'], '\n',
+            ('bold result', u'Instance Type: '), inst['InstanceType'], '\n',
+            ('bold result', u'Image Id: '), inst['ImageId'], '\n',
+            ('bold result', u'Key Name: '), inst['KeyName'], '\n'
+    ]
+    menu.footer = footer_instance(started)
+    draw_result(menu)
+
+    return [started, unavailable]
+
+
 def exit_program(key):
     if os.name == 'nt':
         os.system('cls')
@@ -118,8 +150,10 @@ def handle_input(key):
         else:
             os.system('clear')
         raise urwid.ExitMainLoop()
-    if key == 'B':
+    elif key == 'B':
         goback(menu)
+    else:
+        pass
 
 
 def menu_main(button):
@@ -190,39 +224,14 @@ def describe_instances(nil):
 
     unavailable = False
     started = False
-    color = ''
-    status = ''
+
     for inst in instances:
 
-        if inst['State']['Name'] == 'running':
-            status = 'Started'
-            color = 'started'
-            started = True
-        elif inst['State']['Name'] == 'stopped':
-            status = 'Stopped'
-            color = 'stopped'
-            started = False
-        else:
-            unavailable = True
+        started, unavailable = draw_instance_in_menu(inst)
 
-        menu.body = [
-            ('bold result', u'Instance ID: '), inst['InstanceId'], '\n',
-            ('bold result', u'Instance Status: '), (color, status), '\n',
-            ('bold result', u'PublicDnsName: '), inst['PublicDnsName'], '\n',
-            ('bold result', u'Private Address: '), inst['PrivateIpAddress'], '\n',
-            ('bold result', u'Availability Zone: '), inst['Placement']['AvailabilityZone'], '\n',
-            ('bold result', u'VPC ID: '), inst['VpcId'], '\n',
-            ('bold result', u'Instance Type: '), inst['InstanceType'], '\n',
-            ('bold result', u'Image Id: '), inst['ImageId'], '\n',
-            ('bold result', u'Key Name: '), inst['KeyName'], '\n'
-        ]
-
-        menu.footer = footer_instance(started)
-
-        draw_result(menu)
-        allowed_key = False
+        next_instance = False
         back = False
-        while not allowed_key:
+        while not next_instance:
             ret = getch()
             if ret == 'Q':
                 if os.name == 'nt':
@@ -231,45 +240,24 @@ def describe_instances(nil):
                     os.system('clear')
                 raise urwid.ExitMainLoop()
             elif ret == u' ':
-                allowed_key = True
+                next_instance = True
             elif ret == 'S' and not unavailable and not started:
                 ec2.start_instance(ec2client, inst['InstanceId'])
-                allowed_key = False
-            elif ret == 's' and not unavailable and started:
+                next_instance = False
+            elif ret == 'T' and not unavailable and started:
                 ec2.stop_instance(ec2client, inst['InstanceId'])
-                allowed_key = False
+                next_instance = False
             elif ret == 'B':
                 back = True
-                allowed_key = True
+                next_instance = True
             elif ret == 'R':
-                inst = ec2.get_instance(ec2client,inst['InstanceId'])
-                if inst['State']['Name'] == 'running':
-                    status = 'Started'
-                    color = 'started'
-                    started = True
-                elif inst['State']['Name'] == 'stopped':
-                    status = 'Stopped'
-                    color = 'stopped'
-                    started = False
-                else:
-                    unavailable = True
-
-                menu.body = [
-                    ('bold result', u'Instance ID: '), inst['InstanceId'], '\n',
-                    ('bold result', u'Instance Status: '), (color, status), '\n',
-                    ('bold result', u'PublicDnsName: '), inst['PublicDnsName'], '\n',
-                    ('bold result', u'Private Address: '), inst['PrivateIpAddress'], '\n',
-                    ('bold result', u'Availability Zone: '), inst['Placement']['AvailabilityZone'], '\n',
-                    ('bold result', u'VPC ID: '), inst['VpcId'], '\n',
-                    ('bold result', u'Instance Type: '), inst['InstanceType'], '\n',
-                    ('bold result', u'Image Id: '), inst['ImageId'], '\n',
-                    ('bold result', u'Key Name: '), inst['KeyName'], '\n'
-                ]
-
-                menu.footer = footer_instance(started)
-                allowed_key = True
+                inst = ec2.get_instance(ec2client, inst['InstanceId'])
+                started, unavailable = draw_instance_in_menu(inst)
+                next_instance = False
+            elif ret = 't':
+                pass
             else:
-                allowed_key = False
+                next_instance = False
 
         if back:
             break
@@ -306,6 +294,7 @@ palette = [
     ('quit button', 'dark red', 'black'),
     ('bold result', 'black,bold', 'white'),
     ('stopped', 'dark red,bold', 'white'),
+    ('pending', 'dark blue,bold', 'white'),
     ('started', 'dark green', 'white'),
     ('help', 'dark blue', 'white')
 ]

@@ -44,8 +44,8 @@ def footer_instance(started):
     option2 = urwid.Text(u'(Q): Quit')
     row1 = urwid.Pile([option1,option2])
 
-    option3 = urwid.Text(u'(G): List Security Groups')
-    option4 = urwid.Text(u'(B): Back to previous menu')
+    option3 = urwid.Text(u'(G): Security Groups')
+    option4 = urwid.Text(u'(B): Previous menu')
 
     row2 = urwid.Pile([option3, option4])
 
@@ -53,8 +53,7 @@ def footer_instance(started):
     option6 = urwid.Text(u'(R): Refresh Instance')
 
     row3 = urwid.Pile([option5, option6])
-
-    footer = urwid.Columns([(30, row1), (30, row2), (30, row3)], min_width=30)
+    footer = urwid.Columns([(25, row1), (25, row2), (25, row3)], min_width=30)
 
     footer = urwid.Pile([footer, urwid.Text(('bold result', u'Spacebar to continue'), align='center')])
 
@@ -119,6 +118,7 @@ def draw_instance_in_menu(inst):
 
     status = inst['State']['Name'].title()
     first_screen =[
+            ('reversed', u'Instance'),  u'\n',
             ('bold result', u'Instance ID: '), inst['InstanceId'], u'\n',
             ('bold result', u'Instance Status: '), (color, status), u'\n',
             ('bold result', u'Public DNS: '), inst['PublicDnsName'], u'\n',
@@ -201,7 +201,7 @@ def menu_main(button):
     menu.old_menu = None
     menu.body = [
         (u'EC2 - Elastic Cloud Computing', menu_ec2),
-        (u'S3 - Simple Storage Service', menu_s3),
+        (u'S3 - Simple Storage Service <under dev>', menu_s3),
         (u'Exit', exit_program)
         ]
 
@@ -220,11 +220,11 @@ def menu_ec2(button):
 
     menu.body = [
         (u'Instances', ec2_instances),
-        (u'Images (AMIs)', exit_program),
-        (u'Elastic Bloc Store (EBS)', exit_program),
-        (u'NetWork & Security', exit_program),
-        (u'Load Balancing', exit_program),
-        (u'AutoScaling', exit_program),
+        (u'Images (AMIs) <under dev>', exit_program),
+        (u'Elastic Bloc Store (EBS) <under dev>', exit_program),
+        (u'NetWork & Security <under dev>', exit_program),
+        (u'Load Balancing <under dev>', exit_program),
+        (u'AutoScaling <under dev>', exit_program),
         (u'Back', menu_back )
         ]
     menu.header = u'EC2 - Elastic Cloud Computing'
@@ -305,6 +305,27 @@ def menu_s3():
     pass
 
 
+def check_auth():
+    home = os.path.expanduser("~")
+
+    credentialsf = home + u'/.aws/credentials'
+    try:
+        f = open(credentialsf, 'r')
+        f.close()
+        return True
+    except FileNotFoundError:
+        print(u'AWS credentials file ' + credentialsf + u'not found\n'
+              u'Please, create a proper access keys from IAM and fill this file with the following format:')
+        print(u'\t[default]\n '
+              u'\taws_access_key_id = YOUR_ACCESS_KEY\n'
+              u'\taws_secret_access_key = YOUR_SECRET_KEY\n'
+              u'\tregion=PREFERRED_REGION')
+        return False
+    except PermissionError:
+        print(u'No read permission on ' + credentialsf)
+        return False
+
+
 def init_menu(men):
 
     title = urwid.AttrMap(urwid.Text(men.header, align='center'), 'titlebar')
@@ -349,7 +370,9 @@ menu.footer = [
     u'Press (', ('quit button', u'Q'), u') to quit.',
 ]
 
-layout = init_menu(menu)
-
-main_loop = urwid.MainLoop(layout, palette, unhandled_input=handle_input)
-main_loop.run()
+if check_auth():
+    layout = init_menu(menu)
+    main_loop = urwid.MainLoop(layout, palette, unhandled_input=handle_input)
+    main_loop.run()
+else:
+    pass

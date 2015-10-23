@@ -7,7 +7,10 @@ EC2 related functions
 
 
 def open_client():
-    return aws.client('ec2')
+    try:
+        return aws.client('ec2')
+    except:
+        return ''
 
 
 def list_instances(ec2):

@@ -18,6 +18,10 @@ __copyright__ = "GPL"
 
 
 def getch():
+    '''
+    Get one character from stdin
+    :return: char
+    '''
     old_settings = termios.tcgetattr(0)
     new_settings = old_settings[:]
     new_settings[3] &= ~termios.ICANON
@@ -36,7 +40,12 @@ class Menu:
     old_menu = list()
 
 
-def footer_instance(started):
+def footer_instance(started=False):
+    '''
+    Displays the footer options for instances result
+    :param started ::Boolean:: Is the instance started?
+    :return: footer urwid object
+    '''
     if started:
             option1 = urwid.Text(u'(T): Stop Instance')
     else:
@@ -44,16 +53,12 @@ def footer_instance(started):
     option2 = urwid.Text(u'(Q): Quit')
     row1 = urwid.Pile([option1,option2])
 
-    option3 = urwid.Text(u'(G): Security Groups')
+    option3 = urwid.Text(u'(R): Refresh Instance')
     option4 = urwid.Text(u'(B): Previous menu')
 
     row2 = urwid.Pile([option3, option4])
 
-    option5 = urwid.Text(u'(t): List Tags')
-    option6 = urwid.Text(u'(R): Refresh Instance')
-
-    row3 = urwid.Pile([option5, option6])
-    footer = urwid.Columns([(25, row1), (25, row2), (25, row3)], min_width=30)
+    footer = urwid.Columns([(25, row1), (25, row2)], min_width=25)
 
     footer = urwid.Pile([footer, urwid.Text(('bold result', u'Spacebar to continue'), align='center')])
 
@@ -61,6 +66,11 @@ def footer_instance(started):
 
 
 def draw_menu(m):
+    '''
+    Displays menu
+    :param m: menu object
+    :return: None
+    '''
     body = list()
     for x in m.body:
         button = urwid.Button(x[0])
@@ -78,6 +88,11 @@ def draw_menu(m):
 
 
 def draw_result(men):
+    '''
+    Displays the result of the operations by writing the menu object into the main loop
+    :param men: menu
+    :return: None
+    '''
     main_loop.widget.header = urwid.AttrMap(urwid.Text(men.header, align='center'), 'titlebar')
     main_loop.widget.body = urwid.LineBox(urwid.Overlay(urwid.Filler(men.body, 'top'),
                                                         urwid.SolidFill(u' '), align='center',
@@ -86,8 +101,38 @@ def draw_result(men):
     main_loop.draw_screen()
 
 
-def goback(m):
+def draw_message(body='', fatal=False):
+    '''
+    under development: shows message in front of the display
+    :param body: message to show
+    :param fatal: boolean for fatal exceptions. Exits program
+    :return: None
+    '''
+    if fatal:
+        text = urwid.Text(('fatal message', body))
+        button = urwid.Button(u'Exit Program')
+        urwid.connect_signal(button, 'click', exit_program)
+    else:
+        text = urwid.Text(('informational message', body), align='center')
+        button = urwid.Button(u'Ok')
+        urwid.connect_signal(button, 'click', exit_program)
 
+    main_loop.widget.body = urwid.Overlay(
+        urwid.LineBox(urwid.Filler(urwid.Pile([text, button]), 'middle')),
+        main_loop.widget.body,
+        align='center',
+        width=('relative', 30),
+        valign='middle',
+        height=('relative', 20))
+    main_loop.draw_screen()
+
+
+def goback(m):
+    '''
+    Return to previous menu
+    :param m: Menu object
+    :return: None
+    '''
     if not m.old_menu:
         exit_program(None)
     else:
@@ -99,10 +144,21 @@ def goback(m):
 
 
 def menu_back(nil):
+    '''
+    Just a wrapper to link a connect_signal to goback() function
+    :param nil: None
+    :return: None
+    '''
     goback(menu)
 
 
 def draw_instance_in_menu(inst):
+    '''
+    Draws the result for the "Instances" options. Get the result from a describe_instances and
+     generates the proper menu object to be displayed in the result body
+    :param inst: instance from ec2
+    :return: list with two booleans: is the instance started? is the instance available?
+    '''
     unavailable = False
     row_width = 15
     started = False
@@ -175,7 +231,12 @@ def draw_instance_in_menu(inst):
     return [started, unavailable]
 
 
-def exit_program(key):
+def exit_program(nil):
+    '''
+    Cleans display and exists
+    :param nil: Not used
+    :return: None
+    '''
     if os.name == 'nt':
         os.system('cls')
     else:
@@ -184,6 +245,11 @@ def exit_program(key):
 
 
 def handle_input(key):
+    '''
+    Handles the input from the menus
+    :param key: key pressed
+    :return: None
+    '''
     if key == 'Q':
         if os.name == 'nt':
             os.system('cls')
@@ -196,25 +262,12 @@ def handle_input(key):
         pass
 
 
-def menu_main(button):
-    menu.depth = 0
-    menu.old_menu = None
-    menu.body = [
-        (u'EC2 - Elastic Cloud Computing', menu_ec2),
-        (u'S3 - Simple Storage Service <under dev>', menu_s3),
-        (u'Exit', exit_program)
-        ]
-
-    menu.header = u'SCAWS Main Menu'
-
-    menu.footer = [
-        u'Press (', ('quit button', u'Q'), u') to quit.',
-    ]
-
-    draw_menu(menu)
-
-
-def menu_ec2(button):
+def menu_ec2(nil):
+    '''
+    Generates the menu for ec2 services
+    :param nil: Not used
+    :return: None
+    '''
     # saves actual menu in menu.old_menu previous menus list
     menu.old_menu.append([menu.header, menu.body, menu.footer])
 
@@ -225,7 +278,7 @@ def menu_ec2(button):
         (u'NetWork & Security <under dev>', exit_program),
         (u'Load Balancing <under dev>', exit_program),
         (u'AutoScaling <under dev>', exit_program),
-        (u'Back', menu_back )
+        (u'Back', menu_back)
         ]
     menu.header = u'EC2 - Elastic Cloud Computing'
 
@@ -236,7 +289,12 @@ def menu_ec2(button):
     draw_menu(menu)
 
 
-def ec2_instances(button):
+def ec2_instances(nil):
+    '''
+    Generates the submenu for Instances
+    :param nil: Not used
+    :return: None
+    '''
     # saves actual menu in menu.old_menu previous menus list
     menu.old_menu.append([menu.header, menu.body, menu.footer])
 
@@ -255,6 +313,11 @@ def ec2_instances(button):
 
 
 def describe_instances(nil):
+    '''
+    Generates the result from a drescibe_instances call
+    :param nil:
+    :return:
+    '''
     # saves actual menu in menu.old_menu previous menus list
     menu.old_menu.append([menu.header, menu.body, menu.footer])
 
@@ -297,15 +360,25 @@ def describe_instances(nil):
 
         if back:
             break
-
     goback(menu)
 
 
-def menu_s3():
+def menu_s3(nil):
+    '''
+    For testing
+    :param nil: Not used
+    :return:
+    '''
+    draw_message(u'Testing', False)
     pass
 
 
 def check_auth():
+    '''
+    Check if aws credentials file exists and is readable. It's only executed at the very
+    beginning of scaws, so doesn't use urwid
+    :return: True if exists and readable. False if not
+    '''
     home = os.path.expanduser("~")
 
     credentialsf = home + u'/.aws/credentials'
@@ -327,7 +400,11 @@ def check_auth():
 
 
 def init_menu(men):
-
+    '''
+    Display the main menu. It's a "construct" function to use draw_menu
+    :param men: Menu object to generate the menu
+    :return: None
+    '''
     title = urwid.AttrMap(urwid.Text(men.header, align='center'), 'titlebar')
 
     footer = urwid.Text(men.footer)
@@ -351,6 +428,8 @@ palette = [
     ('quit button', 'dark red', 'black'),
     ('bold result', 'black,bold', 'white'),
     ('stopped', 'dark red,bold', 'white'),
+    ('fatal message', 'dark red,bold', 'white'),
+    ('informational message', 'brown,bold', 'white'),
     ('pending', 'dark blue,bold', 'white'),
     ('started', 'dark green', 'white'),
     ('small title', 'dark blue,bold', 'white'),
@@ -362,7 +441,7 @@ menu.header = 'SCAWS Main Menu'
 
 menu.body = [
     (u'EC2 - Elastic Cloud Computing', menu_ec2),
-    (u'S3 - Simple Storage Service', menu_s3),
+    (u'S3 - Simple Storage Service <under dev>', menu_s3),
     (u'Exit', exit_program)
 ]
 

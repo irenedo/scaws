@@ -1,0 +1,6 @@
+*.pyc
+.idea/
+.git*
+._pycache__
+README.md
+LICENSE
